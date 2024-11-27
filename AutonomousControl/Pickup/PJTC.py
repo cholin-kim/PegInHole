@@ -4,11 +4,10 @@ import copy
 
 from actionlib import SimpleActionClient
 from sensor_msgs.msg import JointState
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from trajectory_msgs.msg import JointTrajectoryPoint
 from control_msgs.msg import FollowJointTrajectoryAction, \
                              FollowJointTrajectoryGoal, FollowJointTrajectoryResult
-from pandaKinematics import pandaKinematics
-import pandaVar
+from Kinematics.panda.pandaKinematics import pandaKinematics
 
 panda = pandaKinematics()
 

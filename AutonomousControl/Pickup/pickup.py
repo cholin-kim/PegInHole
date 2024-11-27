@@ -1,5 +1,4 @@
 import rospy
-import numpy as np
 import copy
 
 
@@ -10,10 +9,8 @@ from PJTC import PJTC
 dm = Detect_Marker()
 pjtc = PJTC()
 
-import cv2
-from pandaKinematics import pandaKinematics
-import pandaVar as pandaVar
-from camera_param import *
+from Kinematics.panda.pandaKinematics import pandaKinematics
+from Camera.eye_in_hand_param import *
 
 panda = pandaKinematics()
 
