@@ -1,4 +1,5 @@
-import pandaVar as pandaVar
+from Kinematics.panda import pandaVar as pandaVar
+# import pandaVar as pandaVar
 from scipy.spatial.transform import Rotation
 import scipy.misc
 import numpy as np
