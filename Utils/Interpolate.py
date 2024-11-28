@@ -14,7 +14,7 @@ def interpolate_q(start_q, end_q, duration):
 
     ts = np.linspace(0, duration, int(duration * 50))
     q_traj = cs(ts)
-    return q_traj
+    return ts, q_traj
 
 
 def interpolate_T(start_T, end_T, duration):

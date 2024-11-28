@@ -28,79 +28,36 @@ class PJTC: # position joint trajectory controller
         joint_state_topic = "/franka_state_controller/joint_states"
         rospy.loginfo("PJTC: Waiting for message on topic '" + joint_state_topic + "'")
         self.joint_state = rospy.wait_for_message(joint_state_topic, JointState)
-        # self.joint_name = self.joint_state.name
-        # self.cur_q = self.joint_state
 
-        # self.cur_pose = dict(zip(self.joint_state.name, self.joint_state.position))
 
         self.fr3_max_dq = np.array([2.62, 2.62, 2.62, 2.62, 5.26, 4.18, 5.26])
-        # self.targ_pose = copy.deepcopy(self.cur_pose)
 
 
-    def set_joint(self, q_des):
+
+    def set_joint(self, q_des, duration=None):
         max_movement = np.abs(q_des - self.joint_state.position)
-        duration = max(max_movement / self.fr3_max_dq)
-        if duration < 1:
-            duration = 1
-        q_traj = interpolate_q(start_q=self.joint_state.position, end_q=q_des, duration=duration)
+
+        if duration is None:
+            duration = max(max_movement / self.fr3_max_dq)
+            if duration < 1:
+                duration = 1
+
+        ts, q_traj = interpolate_q(start_q=self.joint_state.position, end_q=q_des, duration=duration)
 
 
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = self.joint_state.name
-        for q in q_traj:
-            print(q)
+
+        for i in range(len(q_traj)):
+            q = q_traj[i]
+            t = ts[i]
             point = JointTrajectoryPoint()
             point.positions = q
+            point.time_from_start = rospy.Duration.from_sec(t)
 
             goal.trajectory.points.append(point)
-        self.client.send_goal_and_wait(goal)
 
-        result = self.client.get_result()
-
-    def set_joint_direct(self, q_des=None):
-        '''
-        :param target_q(list)
-        '''
-
-
-        target_pose = JointState()
-        # target_pose.name = self.joint_state.name
-        if q_des is None:
-            target_pose.position = self.joint_state.position
-            # for key in target_pose:
-                # target_pose[key] += float(0.05 * np.random.randint(-1, 2))
-        else:
-            target_pose.position = q_des
-            # i =0
-            # for key in target_pose:
-            #     target_pose[key] = q_des[i]
-            #     i += 1
-
-        print("current_pose:", self.joint_state.position)
-        print("target_pose:", q_des)
-
-        point = JointTrajectoryPoint()
-        goal = FollowJointTrajectoryGoal()
-
-        goal.trajectory.joint_names = self.joint_state.name
-        point.positions = target_pose.position
-        # goal.trajectory.joint_names, point.positions = [list(x) for x in zip(*target_pose.items())]
-        point.velocities = [0] * len(q_des)
-
-        goal.trajectory.points.append(point)
-        goal.goal_time_tolerance = rospy.Duration.from_sec(0.5)
-
-
-        # max_movement = max(abs(target_pose[joint] - self.cur_pose[joint]) for joint in target_pose)
-        # max_movement = abs(target_pose[joint] - self.cur_pose[joint] for joint in target_pose)
-        q_movement = abs(q_des - self.joint_state.position)
-
-        duration = max(max(q_movement / self.fr3_max_dq), 0.5)
-        point.time_from_start = rospy.Duration.from_sec(duration)
-        # the robot should reach the specified joint positions (and other parameters) 00 seconds after the trajectory execution begins.
-
-
-        rospy.loginfo('Sending trajectory Goal to target config')
+        goal.goal_time_tolerance = rospy.Duration.from_sec(duration)
         self.client.send_goal_and_wait(goal)
 
         result = self.client.get_result()
@@ -135,46 +92,92 @@ class PJTC: # position joint trajectory controller
         else:
             rospy.loginfo('PJTC: Successfully moved into target pose')
 
-    def set_pose_direct(self, Tb_ed):
+    def set_joint_direct(self, q_des=None):
+        '''
+        :param target_q(list)
+        '''
+
+
+        target_pose = JointState()
+        if q_des is None:
+            target_pose.position = self.joint_state.position
+
+        else:
+            target_pose.position = q_des
+
+
+        print("current_pose:", self.joint_state.position)
+        print("target_pose:", q_des)
+
+        point = JointTrajectoryPoint()
+        goal = FollowJointTrajectoryGoal()
+
+        goal.trajectory.joint_names = self.joint_state.name
+        point.positions = target_pose.position
+        # point.velocities = [0] * len(q_des)
+
+        goal.trajectory.points.append(point)
+        goal.goal_time_tolerance = rospy.Duration.from_sec(0.5)
+
+
+        q_movement = abs(q_des - self.joint_state.position)
+
+        duration = max(max(q_movement / self.fr3_max_dq), 0.5)
+        point.time_from_start = rospy.Duration.from_sec(duration)
+        # the robot should reach the specified joint positions (and other parameters) 00 seconds after the trajectory execution begins.
+
+
+        rospy.loginfo('Sending trajectory Goal to target config')
+        # self.client.send_goal_and_wait(goal)
+        self.client.send_goal(goal)
+
+
+    def set_cartesian_direct(self, Tb_ed, duration=None):
         q_des = panda.ik(Tb_ed, q0=self.joint_state.position)
         q_distance = np.abs(q_des - self.joint_state.position)
         if np.all(q_distance) < np.deg2rad(10):
             self.set_joint_direct(q_des)
         else:
-            self.set_joint(q_des)
+            self.set_joint(q_des, duration)
 
 
-    def set_cartesian_pose(self, Tb_ed, Tb_ee):
+    def set_cartesian(self, Tb_ed, Tb_ee, duration=None):
         if Tb_ee is None:
             Tb_ee = panda.fk(self.joint_state.position)
         q_des = panda.ik(Tb_ed, q0=self.joint_state.position)
         q_distance = np.abs(q_des - self.joint_state.position)
-        duration = max(q_distance / self.fr3_max_dq)
+
+        if duration is None:
+            duration = max(q_distance / self.fr3_max_dq)
         Ts = interpolate_T(start_T=Tb_ee, end_T=Tb_ed, duration=duration)
         for T in Ts:
             q_des = panda.ik(T, q0=self.joint_state.position)
-            self.set_joint_direct(q_des=q_des)
-
+            self.set_joint_direct(q_des)
 
 
 
 
 if __name__ == "__main__":
+    import time
     pjtc = PJTC()
     cur_q = pjtc.joint_state.position
-    targ_q = cur_q + 0.05 * np.ones(7)
-    print(cur_q)
-    print(targ_q)
-    # pjtc.set_joint_direct(q_des=targ_q)
-    pjtc.set_joint(q_des=targ_q)
-    # import time
-    # time.sleep(5)
-    # exit()
 
-    # cur_T = panda.fk(cur_q)[0][-1]
-    # targ_T = np.eye(4)
-    # targ_T[:3, -1] = cur_T[:3, -1] + np.array([0.05, 0.05, 0.05])
+    ## Joint Space Command
+    # targ_q = cur_q - 0.05 * np.ones(7)
+    # print(cur_q)
+    # print(targ_q)
+    # pjtc.set_joint_direct(q_des=targ_q)
+    # pjtc.set_joint(q_des=targ_q, duration=3)
+
+    ## Cartesian Space Command
+    cur_T = panda.fk(cur_q)[0][-1]
+    targ_T = np.eye(4)
+    targ_T[:3, -1] = cur_T[:3, -1] + np.array([0, 0.05, 0])
+    targ_T[:3, :3] = cur_T[:3, :3]
     # print(cur_T)
     # print(targ_T)
-    # pjtc.set_cartesian_pose(Tb_ed=targ_T, Tb_ee=cur_T)
+    # # pjtc.set_cartesian_direct(Tb_ed=targ_T, duration=5)
+    st = time.time()
+    pjtc.set_cartesian(Tb_ed=targ_T, Tb_ee=cur_T, duration=2)
+    print(time.time() - st)
 
