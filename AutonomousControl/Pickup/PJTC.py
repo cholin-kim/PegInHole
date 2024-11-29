@@ -43,7 +43,14 @@ class PJTC: # position joint trajectory controller
                 duration = 1
 
         ts, q_traj = interpolate_q(start_q=self.joint_state.position, end_q=q_des, duration=duration)
+        # ts, q_traj_lspb = interpolate_q_lspb(start_q=self.joint_state.position, end_q=q_des, duration=duration)
+        # ts, q_traj = interpolate_q_lspb(start_q=self.joint_state.position, end_q=q_des, duration=duration)
 
+        # import matplotlib.pyplot as plt
+        # plt.scatter(ts, q_traj[:, 0])
+        # plt.scatter(ts, q_traj_lspb[:, 0])
+        # plt.show()
+        # exit()
 
         goal = FollowJointTrajectoryGoal()
         goal.trajectory.joint_names = self.joint_state.name
@@ -54,6 +61,10 @@ class PJTC: # position joint trajectory controller
             point = JointTrajectoryPoint()
             point.positions = q
             point.time_from_start = rospy.Duration.from_sec(t)
+            # if i == 0:
+            #     point.velocities = np.zeros(len(q_traj))
+            # if i == len(q_traj) - 1:
+            #     point.velocities = np.zeros(len(q_traj))
 
             goal.trajectory.points.append(point)
 
@@ -96,8 +107,6 @@ class PJTC: # position joint trajectory controller
         '''
         :param target_q(list)
         '''
-
-
         target_pose = JointState()
         if q_des is None:
             target_pose.position = self.joint_state.position
@@ -106,8 +115,8 @@ class PJTC: # position joint trajectory controller
             target_pose.position = q_des
 
 
-        print("current_pose:", self.joint_state.position)
-        print("target_pose:", q_des)
+        # print("current_pose:", self.joint_state.position)
+        # print("target_pose:", q_des)
 
         point = JointTrajectoryPoint()
         goal = FollowJointTrajectoryGoal()
@@ -132,23 +141,24 @@ class PJTC: # position joint trajectory controller
         self.client.send_goal(goal)
 
 
-    def set_cartesian_direct(self, Tb_ed, duration=None):
-        q_des = panda.ik(Tb_ed, q0=self.joint_state.position)
-        q_distance = np.abs(q_des - self.joint_state.position)
-        if np.all(q_distance) < np.deg2rad(10):
-            self.set_joint_direct(q_des)
-        else:
-            self.set_joint(q_des, duration)
+    # def set_cartesian_direct(self, Tb_ed, duration=None):
+    #     q_des = panda.ik(Tb_ed, q0=self.joint_state.position)
+    #     q_distance = np.abs(q_des - self.joint_state.position)
+    #     if np.all(q_distance) < np.deg2rad(10):
+    #         self.set_joint_direct(q_des)
+    #     else:
+    #         self.set_joint(q_des, duration)
 
 
-    def set_cartesian(self, Tb_ed, Tb_ee, duration=None):
+    def set_cartesian(self, Tb_ed, Tb_ee=None, duration=None):
         if Tb_ee is None:
-            Tb_ee = panda.fk(self.joint_state.position)
+            Tb_ee = panda.fk(self.joint_state.position)[0][-1]
         q_des = panda.ik(Tb_ed, q0=self.joint_state.position)
         q_distance = np.abs(q_des - self.joint_state.position)
 
         if duration is None:
             duration = max(q_distance / self.fr3_max_dq)
+
         Ts = interpolate_T(start_T=Tb_ee, end_T=Tb_ed, duration=duration)
         for T in Ts:
             q_des = panda.ik(T, q0=self.joint_state.position)
@@ -166,13 +176,14 @@ if __name__ == "__main__":
     # targ_q = cur_q - 0.05 * np.ones(7)
     # print(cur_q)
     # print(targ_q)
-    # pjtc.set_joint_direct(q_des=targ_q)
+    # # pjtc.set_joint_direct(q_des=targ_q)
     # pjtc.set_joint(q_des=targ_q, duration=3)
+    # exit()
 
     ## Cartesian Space Command
     cur_T = panda.fk(cur_q)[0][-1]
     targ_T = np.eye(4)
-    targ_T[:3, -1] = cur_T[:3, -1] + np.array([0, 0.05, 0])
+    targ_T[:3, -1] = cur_T[:3, -1] + np.array([0.05, 0.05, 0])
     targ_T[:3, :3] = cur_T[:3, :3]
     # print(cur_T)
     # print(targ_T)

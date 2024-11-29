@@ -17,15 +17,17 @@ panda = pandaKinematics()
 class Pickup:
     def __init__(self):
         if not rospy.get_node_uri():
-            rospy.init_node("pickup")
+            # rospy.init_node("pickup")
+            rospy.init_node("position_joint_trajectory_controller")
 
         # rectangle information defined by aruco markers as 4 corners
-        self.w = 0.07
-        self.h = 0.07
+        # self.w = 0.07
+        # self.h = 0.07
 
         detected_ids, aruco_poses = dm.detect_marker()
-        sensor_pose = self.get_sensor_pose(detected_ids=detected_ids, aruco_poses=aruco_poses)
-        self.ready_to_pick(sensor_pose)
+        Tcam_sensor = self.get_sensor_pose(detected_ids=detected_ids, aruco_poses=aruco_poses)
+        self.ready_to_pick(Tcam_sensor)
+        self.pick()
 
 
 
@@ -35,11 +37,10 @@ class Pickup:
         :param aruco_poses:
         :return: Tcam_sensor
         '''
-        if len(self, detected_ids) == 1:
-            if detected_ids[0] == 0:
-                sensor_pose = copy.deepcopy(aruco_poses[0])
-                sensor_pose[0] += self.w/2
-                sensor_pose[1] -= self.h/2
+        # if len(self.detected_ids) == 1:
+        if detected_ids[0] == 0:
+            sensor_pose = copy.deepcopy(aruco_poses[0])
+            # print("aruco_pose:", sensor_pose)
 
         # # position
         # # sensor_pos[2] = np.mean(aruco_poses[found_id, 2])
@@ -53,27 +54,39 @@ class Pickup:
         Tcam_sensor = np.eye(4)
         Tcam_sensor[:3, -1] = sensor_pose[:3]
         Tcam_sensor[:3, :3] = R.from_rotvec(sensor_pose[3:]).as_matrix()
+        print("Tcam_sensor:", Tcam_sensor)
 
         return Tcam_sensor
 
 
 
     def ready_to_pick(self, Tcam_sensor):
-        Tb_wp = self.get_waypoint(self, Tcam_sensor)
-        pjtc.set_pose_direct(Tb_wp)
+        Tb_wp = self.get_waypoint(Tcam_sensor)
+        print(R.from_matrix(Tb_wp[:3, :3]).as_euler('XYZ', degrees=True))
+        import pdb;pdb.set_trace()
+        pjtc.set_cartesian(Tb_ed=Tb_wp, duration=10)
 
 
     def get_waypoint(self, Tcam_sensor):
-        Tb_ee = panda.fk(pjtc.joint_state)[0][-1]
-        Tb_sensor = Tb_ee @ Tee_cam @ Tcam_sensor
+        Tb_ee = panda.fk(pjtc.joint_state.position)[0][-1]
+        Tb_sensor = Tb_ee @ Tee_cam @ Tcam_sensor   #Tee_cam from Camera/eye_in_hand_param.py
         Tb_wp = np.copy(Tb_sensor)
         Tb_wp[2, -1] += 0.1
+        import pdb;
+        pdb.set_trace()
+
+        Tb_wp[:3, :3] = R.from_euler('X', [np.pi]).as_matrix()  # temporary
         return Tb_wp
 
 
 
 
 
+
+
+
+if __name__ == "__main__":
+    pu = Pickup()
 
 
 
