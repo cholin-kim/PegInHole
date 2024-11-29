@@ -62,16 +62,15 @@ class Detect_Marker:
 
     def detect_marker(self, visualize=False):
         self.find_aruco()
-
         aruco_poses = np.zeros((4, 6))
+
         for i in range(len(self.ids)):
-            self.marker_len
             marker3dPoint = np.array([[0, 0, 0],
                                         [0, self.marker_len, 0],
                                         [self.marker_len, self.marker_len, 0],
                                         [self.marker_len, 0, 0]], dtype='float32').reshape((4, 1, 3))
-            imgPoint = self.corners[i].astype('float32')
-            _, rvec, tvec = cv2.solvePnP(marker3dPoint, imgPoint, self.corners[i], self.distortion_params)
+
+            _, rvec, tvec = cv2.solvePnP(marker3dPoint, self.corners[i], self.intrinsic_matrix, self.distortion_params)
 
             # rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(self.corners[i], 0.0017, self.intrinsic_matrix, self.distortion_params)  # 0.06: marker length
             # pos_x, pos_y, pos_z = tvec[0][0][0], tvec[0][0][1], tvec[0][0][2]
@@ -101,12 +100,13 @@ class Detect_Marker:
 if __name__ == '__main__':
     rospy.init_node('realsense_aruco_pub')
 
-    da = Detect_Marker(marker_length=0.0017)
+    da = Detect_Marker(marker_length=0.017)
     rate = rospy.Rate(300)
     while True:
         ids, aruco_poses = da.detect_marker(visualize=False)
         # print(ids)
         Tcam_aruco = aruco_poses[0]
+        print(Tcam_aruco)
 
         import time
         time.sleep(1)

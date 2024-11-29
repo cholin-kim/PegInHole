@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation as R
 
 from detect_marker import Detect_Marker
 from PJTC import PJTC
-dm = Detect_Marker()
+dm = Detect_Marker(marker_length=0.017)
 pjtc = PJTC()
 
 from Kinematics.panda.pandaKinematics import pandaKinematics
@@ -27,7 +27,6 @@ class Pickup:
         detected_ids, aruco_poses = dm.detect_marker()
         Tcam_sensor = self.get_sensor_pose(detected_ids=detected_ids, aruco_poses=aruco_poses)
         self.ready_to_pick(Tcam_sensor)
-        self.pick()
 
 
 
@@ -71,12 +70,12 @@ class Pickup:
         Tb_ee = panda.fk(pjtc.joint_state.position)[0][-1]
         Tb_sensor = Tb_ee @ Tee_cam @ Tcam_sensor   #Tee_cam from Camera/eye_in_hand_param.py
         Tb_wp = np.copy(Tb_sensor)
-        Tb_wp[2, -1] += 0.1
-        import pdb;
-        pdb.set_trace()
+        Tb_wp[2, -1] += 0.2
 
         Tb_wp[:3, :3] = R.from_euler('X', [np.pi]).as_matrix()  # temporary
         return Tb_wp
+
+
 
 
 
