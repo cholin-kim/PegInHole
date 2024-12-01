@@ -60,4 +60,4 @@ Tee_cam = np.array([[-0.707564,  -0.706569,  0.0106639,  0.0699855],
 
 
 # R.from_matrix(Tee_cam[:3,:3]).as_euler('XYZ', degrees=True)
-# array([ -0.16813161,   0.61100795, 135.04031963]) -> calibration 잘 된 것 확인
+# array([ -0.16813161,   0.61100795, 135.04031963]) -> calibration verified

@@ -17,7 +17,6 @@ panda = pandaKinematics()
 class Pickup:
     def __init__(self):
         if not rospy.get_node_uri():
-            # rospy.init_node("pickup")
             rospy.init_node("position_joint_trajectory_controller")
 
         # rectangle information defined by aruco markers as 4 corners

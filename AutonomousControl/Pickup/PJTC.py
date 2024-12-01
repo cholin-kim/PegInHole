@@ -20,57 +20,50 @@ class PJTC: # position joint trajectory controller
         if not rospy.get_node_uri():
             rospy.init_node("position_joint_trajectory_controller")
         self.action = rospy.resolve_name('~follow_joint_trajectory')
+
         self.client = SimpleActionClient(self.action, FollowJointTrajectoryAction)
         rospy.loginfo("PJTC: Waiting for '" + self.action + "' action to come up")
         self.client.wait_for_server()
 
-
         joint_state_topic = "/franka_state_controller/joint_states"
         rospy.loginfo("PJTC: Waiting for message on topic '" + joint_state_topic + "'")
+
         self.joint_state = rospy.wait_for_message(joint_state_topic, JointState)
-
-
         self.fr3_max_dq = np.array([2.62, 2.62, 2.62, 2.62, 5.26, 4.18, 5.26])
 
 
+    def client_send_q_traj(self, ts, q_traj):   # is this the best choice? ts and q_traj as input?
+        ## Experimental
+        # ts = np.append(0, ts)
+        # ts = np.append(ts, ts[-1])
 
-    def set_joint(self, q_des, duration=None):
-        max_movement = np.abs(q_des - self.joint_state.position)
-
-        if duration is None:
-            duration = max(max_movement / self.fr3_max_dq)
-            if duration < 1:
-                duration = 1
-
-        ts, q_traj = interpolate_q(start_q=self.joint_state.position, end_q=q_des, duration=duration)
-        # ts, q_traj_lspb = interpolate_q_lspb(start_q=self.joint_state.position, end_q=q_des, duration=duration)
-        # ts, q_traj = interpolate_q_lspb(start_q=self.joint_state.position, end_q=q_des, duration=duration)
-
-        # import matplotlib.pyplot as plt
-        # plt.scatter(ts, q_traj[:, 0])
-        # plt.scatter(ts, q_traj_lspb[:, 0])
-        # plt.show()
-        # exit()
+        # q_traj = np.concatenate((q_traj[0].reshape(1, -1), q_traj), axis=0)
+        # q_traj = np.concatenate((q_traj, q_traj[-1].reshape(1, -1)), axis=0)
+        ##
 
         goal = FollowJointTrajectoryGoal()
+        goal.trajectory.header.stamp = rospy.Time.now()
         goal.trajectory.joint_names = self.joint_state.name
 
+        # time_step = ts[1] - ts[0]
+
         for i in range(len(q_traj)):
-            q = q_traj[i]
-            t = ts[i]
             point = JointTrajectoryPoint()
-            point.positions = q
-            point.time_from_start = rospy.Duration.from_sec(t)
+            point.positions = q_traj[i]
+            point.time_from_start = rospy.Duration.from_sec(ts[i])  # time_from_start is relative to trajectory.header.stamp
+            # point.time_from_start = rospy.Duration.from_sec(time_step)
+
+            ## Experimental
             # if i == 0:
-            #     point.velocities = np.zeros(len(q_traj))
+                # point.velocities = np.zeros(len(q_traj))
             # if i == len(q_traj) - 1:
-            #     point.velocities = np.zeros(len(q_traj))
+                # point.velocities = np.zeros(len(q_traj))
+            ##
 
             goal.trajectory.points.append(point)
 
         goal.goal_time_tolerance = rospy.Duration.from_sec(duration)
         self.client.send_goal_and_wait(goal)
-
         result = self.client.get_result()
 
         if result.error_code != FollowJointTrajectoryResult.SUCCESSFUL:
@@ -102,52 +95,60 @@ class PJTC: # position joint trajectory controller
 
         else:
             rospy.loginfo('PJTC: Successfully moved into target pose')
-
-    def set_joint_direct(self, q_des=None):
-        '''
-        :param target_q(list)
-        '''
-        target_pose = JointState()
-        if q_des is None:
-            target_pose.position = self.joint_state.position
-
-        else:
-            target_pose.position = q_des
+        return result
 
 
-        # print("current_pose:", self.joint_state.position)
-        # print("target_pose:", q_des)
+    def set_joint(self, q_des, duration=None):
+        max_movement = np.abs(q_des - self.joint_state.position)
 
-        point = JointTrajectoryPoint()
-        goal = FollowJointTrajectoryGoal()
+        if duration is None:
+            duration = max(max_movement / self.fr3_max_dq)
+            if duration < 1:
+                duration = 1
 
-        goal.trajectory.joint_names = self.joint_state.name
-        point.positions = target_pose.position
-        # point.velocities = [0] * len(q_des)
-
-        goal.trajectory.points.append(point)
-        goal.goal_time_tolerance = rospy.Duration.from_sec(0.5)
+        ts, q_traj = interpolate_q([self.joint_state.position, q_des], duration=duration)
+        self.client_send_q_traj(ts, q_traj)
 
 
-        q_movement = abs(q_des - self.joint_state.position)
 
-        duration = max(max(q_movement / self.fr3_max_dq), 0.5)
-        point.time_from_start = rospy.Duration.from_sec(duration)
-        # the robot should reach the specified joint positions (and other parameters) 00 seconds after the trajectory execution begins.
-
-
-        rospy.loginfo('Sending trajectory Goal to target config')
-        # self.client.send_goal_and_wait(goal)
-        self.client.send_goal(goal)
-
-
-    # def set_cartesian_direct(self, Tb_ed, duration=None):
-    #     q_des = panda.ik(Tb_ed, q0=self.joint_state.position)
-    #     q_distance = np.abs(q_des - self.joint_state.position)
-    #     if np.all(q_distance) < np.deg2rad(10):
-    #         self.set_joint_direct(q_des)
+    # def set_joint_direct(self, q_des=None):
+    #     '''
+    #     :param target_q(list)
+    #     '''
+    #     target_pose = JointState()
+    #     if q_des is None:
+    #         target_pose.position = self.joint_state.position
+    #
     #     else:
-    #         self.set_joint(q_des, duration)
+    #         target_pose.position = q_des
+    #
+    #
+    #     # print("current_pose:", self.joint_state.position)
+    #     # print("target_pose:", q_des)
+    #
+    #     point = JointTrajectoryPoint()
+    #     goal = FollowJointTrajectoryGoal()
+    #
+    #     goal.trajectory.joint_names = self.joint_state.name
+    #     point.positions = target_pose.position
+    #     # point.velocities = [0] * len(q_des)
+    #
+    #     goal.trajectory.points.append(point)
+    #     goal.goal_time_tolerance = rospy.Duration.from_sec(0.5)
+    #
+    #
+    #     q_movement = abs(q_des - self.joint_state.position)
+    #
+    #     duration = max(max(q_movement / self.fr3_max_dq), 0.5)
+    #     point.time_from_start = rospy.Duration.from_sec(duration)
+    #     # the robot should reach the specified joint positions (and other parameters) 00 seconds after the trajectory execution begins.
+    #
+    #
+    #     rospy.loginfo('Sending trajectory Goal to target config')
+    #     # self.client.send_goal_and_wait(goal)
+    #     self.client.send_goal(goal)
+
+
 
 
     def set_cartesian(self, Tb_ed, Tb_ee=None, duration=None):
@@ -160,9 +161,14 @@ class PJTC: # position joint trajectory controller
             duration = max(q_distance / self.fr3_max_dq)
 
         Ts = interpolate_T(start_T=Tb_ee, end_T=Tb_ed, duration=duration)
+        q_cart_wp = []
         for T in Ts:
-            q_des = panda.ik(T, q0=self.joint_state.position)
-            self.set_joint_direct(q_des)
+            q_cart_wp.append(panda.ik(T, q0=self.joint_state.position))
+
+        ts, q_traj = interpolate_q(q_cart_wp, duration=duration)
+        self.client_send_q_traj(ts, q_traj)
+
+
 
 
 

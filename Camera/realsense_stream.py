@@ -1,5 +1,5 @@
 
-## Used when realsense-ros is unavailable or when not using realsense-ros
+## Use when realsense-ros is unavailable or when not using realsense-ros
 
 import pyrealsense2 as rs
 import numpy as np

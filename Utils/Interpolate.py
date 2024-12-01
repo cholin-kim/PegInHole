@@ -8,33 +8,76 @@ from scipy.spatial.transform import RotationSpline
 
 
 
-def interpolate_q(start_q, end_q, duration):
-    t = np.array([0, duration])
-    cs = CubicSpline(t, np.array([start_q, end_q]), bc_type='clamped')
-
+def interpolate_q(q_lst, duration, visualize=False):
+    '''
+    performs cubic spline interpolation.
+    limitation: do not allow us to specify the initial or final acceleration
+    assumption: each point in q_lst has same time distance
+    :param q_lst: waypoints of trajectory
+    :return:
+    '''
+    t = np.linspace(0, duration, len(q_lst))
     ts = np.linspace(0, duration, int(duration * 100))
-    q_traj = cs(ts)
+
+    q_lst = np.array(q_lst).reshape(len(q_lst), -1)
+
+
+    cs = []
+    q_traj = []
+
+    for i in range(len(q_lst[0])):
+        cs.append(CubicSpline(t, q_lst[:, i], bc_type='clamped'))
+
+        q_traj_individual = cs[i](ts)
+        q_traj.append(q_traj_individual)
+
+    if visualize:
+        import matplotlib.pyplot as plt
+        for i in range(len(q_lst[0])):
+            plt.scatter(ts, q_traj[i], s=2)
+        for i in range(len(t)):
+            plt.scatter(np.ones(len(q_lst[0])) * t[i], q_lst[i], s=20)
+        plt.show()
+
     return ts, q_traj
 
-# def interpolate_q_(q_lst, duration):
+# def interpolate_q_modf(q_lst, duration, visualize=False):
+#     '''
+#     modified version of interpolate_q, guarantees start vel and end vel as 0.
+#     '''
+#
+#
 #     t = np.linspace(0, duration, len(q_lst))
-#     cs = CubicSpline(t, np.array(q_lst), bc_type='clamped')
+#     t = np.append(0, t) <-- error: t should increase monotonically
+#     t = np.append(t, t[-1])
 #
 #     ts = np.linspace(0, duration, int(duration * 100))
-#     q_traj = cs(ts)
+#     ts = np.append(0, ts)
+#     ts = np.append(ts, ts[-1])
+#
+#     q_lst = np.array(q_lst).reshape(len(q_lst), -1)
+#     q_lst = np.concatenate((q_lst[0].reshape(1, -1), q_lst), axis=0)
+#     q_lst = np.concatenate((q_lst, q_lst[-1].reshape(1, -1)), axis=0)
+#
+#     cs = []
+#     q_traj = []
+#
+#     for i in range(len(q_lst[0])):
+#         import pdb;pdb.set_trace()
+#         cs.append(CubicSpline(t, q_lst[:, i], bc_type='clamped'))
+#
+#         q_traj_individual = cs[i](ts)
+#         q_traj.append(q_traj_individual)
+#
+#     if visualize:
+#         import matplotlib.pyplot as plt
+#         for i in range(len(q_lst[0])):
+#             plt.scatter(ts, q_traj[i], s=2)
+#         for i in range(len(t)):
+#             plt.scatter(np.ones(len(q_lst[0])) * t[i], q_lst[i], s=20)
+#         plt.show()
+#
 #     return ts, q_traj
-#
-# from roboticstoolbox import trapezoidal
-# def interpolate_q_lspb(start_q, end_q, duration, max_vel=None):
-#     ts = np.linspace(0, duration, int(duration * 100))
-#     q_traj = np.zeros((len(ts), len(start_q)))
-#
-#     for i in range(len(start_q)):
-#         lspb = trapezoidal(start_q[i], end_q[i], t=len(ts))
-#         q_traj[:, i] = lspb.q
-#
-#     return ts, q_traj
-
 
 
 
@@ -58,3 +101,18 @@ def interpolate_T(start_T, end_T, duration):
     Ts[:, :3, -1] = pos_traj
     Ts[:, :3, :3] = ori_traj
     return Ts
+
+
+if __name__ == "__main__":
+    q0 = np.array([0, 0, 0, 0, 0, 0])
+    q1 = np.array([2, 3, 4, 5, 6, 10])
+    q2 = np.array([2, -1, 1, 5, 0, 15])
+    q3 = np.array([10, 1, 2, 10, -2, 0])
+    duration = 4
+
+    t = np.array([0, 1, 2, 3])
+    q_lst = [q0, q1, q2, q3]
+    q_lst = np.array(q_lst).reshape(len(q_lst), -1)
+
+    # ts, q_traj = interpolate_q([q0, q1, q2, q3], duration, visualize=True)
+    ts, q_traj = interpolate_q_modf([q0, q1, q2, q3], duration, visualize=True)

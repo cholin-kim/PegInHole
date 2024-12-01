@@ -11,7 +11,6 @@ from Camera.eye_in_hand_param import *
 class Detect_Marker:
     def __init__(self, marker_length):
         if not rospy.get_node_uri():
-            # rospy.init_node("detect_marker")
             rospy.init_node("position_joint_trajectory_controller")
 
         ## Variables ##
