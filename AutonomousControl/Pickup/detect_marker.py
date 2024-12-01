@@ -6,10 +6,11 @@ from cv_bridge import CvBridge
 from Camera.eye_in_hand_param import *
 
 '''
-사용한 arucomarker에 따라서 arucoDict 바꿔야 함. 기본적으로 4*4, id 50개까지만 설정해놓음.
+4X4_50 dictionary set as default.
+If you are using more aruco markers or other shape(3X3, ...), you should add aruco dictionary.
 '''
 class Detect_Marker:
-    def __init__(self, marker_length):
+    def __init__(self, marker_size):
         if not rospy.get_node_uri():
             rospy.init_node("position_joint_trajectory_controller")
 
@@ -17,7 +18,7 @@ class Detect_Marker:
         image_topic = "/camera/color/image_raw"
         self.distortion_params = D
         self.intrinsic_matrix = K
-        self.marker_len = marker_length
+        self.marker_size = marker_size
 
 
         ## Utils ##
@@ -64,18 +65,26 @@ class Detect_Marker:
         aruco_poses = np.zeros((4, 6))
 
         for i in range(len(self.ids)):
-            marker3dPoint = np.array([[0, 0, 0],
-                                        [0, self.marker_len, 0],
-                                        [self.marker_len, self.marker_len, 0],
-                                        [self.marker_len, 0, 0]], dtype='float32').reshape((4, 1, 3))
+            marker_points = np.array([[-self.marker_size / 2, self.marker_size / 2, 0],
+                                      [self.marker_size / 2, self.marker_size / 2, 0],
+                                      [self.marker_size / 2, -self.marker_size / 2, 0],
+                                      [-self.marker_size / 2, -self.marker_size / 2, 0]], dtype=np.float32)
 
-            _, rvec, tvec = cv2.solvePnP(marker3dPoint, self.corners[i], self.intrinsic_matrix, self.distortion_params)
-
-            # rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(self.corners[i], 0.0017, self.intrinsic_matrix, self.distortion_params)  # 0.06: marker length
-            # pos_x, pos_y, pos_z = tvec[0][0][0], tvec[0][0][1], tvec[0][0][2]
-            # rot_x, rot_y, rot_z = rvec[0][0][0], rvec[0][0][1], rvec[0][0][2]
+            # _, rvec, tvec = cv2.solvePnP(marker_points, self.corners[i], self.intrinsic_matrix, self.distortion_params)
+            _, rvec, tvec = cv2.solvePnP(marker_points, self.corners[i], self.intrinsic_matrix, self.distortion_params, False, cv2.SOLVEPNP_IPPE_SQUARE)
             pos_x, pos_y, pos_z = tvec[0][0], tvec[1][0], tvec[2][0]
             rot_x, rot_y, rot_z = rvec[0][0], rvec[1][0], rvec[2][0]
+
+            '''
+            ## depending on cv version, 
+            works for:
+             opencv-python-4.9.0.80
+             opencv-contrib-python-4.9.0.80
+            # rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(self.corners[i], 0.0017, self.intrinsic_matrix, self.distortion_params)  # 0.06: marker length
+            # pos_x, pos_y, pos_z = tvec[0][0][0], tvec[0][0][1], tvec[0][0][2]
+            # rot_x, rot_y, rot_z = rvec[0][0][0], rvec[0][0][1], rvec[0][0][2] 
+            '''
+
             # [[quat_x, quat_y, quat_z, quat_w]] = R.from_rotvec(rvec.reshape(1, 3)).as_quat()
             # [roll_x, pitch_y, yaw_z] = R.from_quat(np.array([quat_x, quat_y, quat_z, quat_w])).as_euler('xyz', degrees=True)
             # aruco_poses[i] = [pos_x, pos_y, pos_z, quat_x, quat_y, quat_z, quat_w]

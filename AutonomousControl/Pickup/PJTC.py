@@ -32,7 +32,7 @@ class PJTC: # position joint trajectory controller
         self.fr3_max_dq = np.array([2.62, 2.62, 2.62, 2.62, 5.26, 4.18, 5.26])
 
 
-    def client_send_q_traj(self, ts, q_traj):   # is this the best choice? ts and q_traj as input?
+    def client_send_goal(self, ts, q_traj):   # is this the best choice? ts and q_traj as input?
         ## Experimental
         # ts = np.append(0, ts)
         # ts = np.append(ts, ts[-1])
@@ -107,7 +107,7 @@ class PJTC: # position joint trajectory controller
                 duration = 1
 
         ts, q_traj = interpolate_q([self.joint_state.position, q_des], duration=duration)
-        self.client_send_q_traj(ts, q_traj)
+        self.client_send_goal(ts, q_traj)
 
 
 
@@ -166,7 +166,7 @@ class PJTC: # position joint trajectory controller
             q_cart_wp.append(panda.ik(T, q0=self.joint_state.position))
 
         ts, q_traj = interpolate_q(q_cart_wp, duration=duration)
-        self.client_send_q_traj(ts, q_traj)
+        self.client_send_goal(ts, q_traj)
 
 
 
