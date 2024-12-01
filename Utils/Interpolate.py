@@ -5,7 +5,7 @@ panda = pandaKinematics()
 from scipy.interpolate import CubicSpline
 from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import RotationSpline
-
+from scipy.spatial.transform import Slerp
 
 
 def interpolate_q(q_lst, duration, visualize=False):
@@ -16,11 +16,14 @@ def interpolate_q(q_lst, duration, visualize=False):
     :param q_lst: waypoints of trajectory
     :return:
     '''
+
     t = np.linspace(0, duration, len(q_lst))
-    ts = np.linspace(0, duration, int(duration * 100))
+
+    # Too many sampling does not allow robot reaching its interpolated waypoints before the next goal, hence worse performance
+    ts = np.linspace(0, duration, min(int(duration * 10), len(q_lst)))
+
 
     q_lst = np.array(q_lst).reshape(len(q_lst), -1)
-
 
     cs = []
     q_traj = []
@@ -36,8 +39,10 @@ def interpolate_q(q_lst, duration, visualize=False):
         for i in range(len(q_lst[0])):
             plt.scatter(ts, q_traj[i], s=2)
         for i in range(len(t)):
-            plt.scatter(np.ones(len(q_lst[0])) * t[i], q_lst[i], s=20)
+            plt.scatter(np.ones(len(q_lst[0])) * t[i], q_lst[i], s=20, c='red')
         plt.show()
+
+    q_traj = np.array(q_traj).reshape(7, -1)
 
     return ts, q_traj
 
@@ -86,20 +91,24 @@ def interpolate_T(start_T, end_T, duration):
     pos = start_T[:3, -1]
     pos_des = end_T[:3, -1]
 
-    cs = CubicSpline(t, np.array([pos, pos_des]), bc_type='clamped')
-
     ori = R.from_matrix(start_T[:3, :3])
     ori_des = R.from_matrix(end_T[:3, :3])
 
-    RS = RotationSpline(t, R.concatenate([ori, ori_des]))
+    # slerp = Slerp(t, R.concatenate([ori, ori_des]))
+    RS = RotationSpline(t, R.concatenate([ori, ori_des]))   # rotation vector + cubic spline
+    # Limitation: The angular acceleration is continuous, but not smooth.
 
-    ts = np.linspace(0, duration, int(duration * 100))
-    pos_traj = cs(ts)
+    ts = np.linspace(0, duration, int(duration * 30))
+    # import pdb;pdb.set_trace()
+
+    pos_traj = np.linspace(pos, pos_des, len(ts))
     ori_traj = RS(ts).as_matrix()
+    # ori_traj = slerp(ts).as_matrix()
     Ts = np.zeros((len(pos_traj), 4, 4))
     Ts[:, -1, -1] = 1
     Ts[:, :3, -1] = pos_traj
     Ts[:, :3, :3] = ori_traj
+
     return Ts
 
 
@@ -115,4 +124,19 @@ if __name__ == "__main__":
     q_lst = np.array(q_lst).reshape(len(q_lst), -1)
 
     # ts, q_traj = interpolate_q([q0, q1, q2, q3], duration, visualize=True)
-    ts, q_traj = interpolate_q_modf([q0, q1, q2, q3], duration, visualize=True)
+    # ts, q_traj = interpolate_q_modf([q0, q1, q2, q3], duration, visualize=True)
+
+
+    Tb_ed = np.array([
+        [ 1.     ,  0.     ,  0.     ,  0.55233],
+        [ 0.     , -1.     , -0.     ,  0.06299],
+        [ 0.     ,  0.     , -1.     ,  0.37146],
+        [ 0.     ,  0.     ,  0.     ,  1.     ]])
+
+    Tb_ee = np.array([
+        [0.94829, 0.16114, 0.27347, 0.38523],
+        [0.18755, -0.97953, -0.07316, 0.12156],
+        [0.25608, 0.12067, -0.95909, 0.6306],
+        [0., 0., 0., 1.]])
+
+    Ts = interpolate_T(Tb_ee, Tb_ed, duration=7)

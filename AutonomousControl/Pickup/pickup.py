@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation as R
 
 from detect_marker import Detect_Marker
 from PJTC import PJTC
-dm = Detect_Marker(marker_length=0.017)
+dm = Detect_Marker(marker_size=0.017)
 pjtc = PJTC()
 
 from Kinematics.panda.pandaKinematics import pandaKinematics
@@ -40,6 +40,7 @@ class Pickup:
             sensor_pose = copy.deepcopy(aruco_poses[0])
             # print("aruco_pose:", sensor_pose)
 
+        ## Additional algorithm will be added soon for multiple markers present in image.
         # # position
         # # sensor_pos[2] = np.mean(aruco_poses[found_id, 2])
         # center_pos_cand = []
@@ -52,7 +53,7 @@ class Pickup:
         Tcam_sensor = np.eye(4)
         Tcam_sensor[:3, -1] = sensor_pose[:3]
         Tcam_sensor[:3, :3] = R.from_rotvec(sensor_pose[3:]).as_matrix()
-        print("Tcam_sensor:", Tcam_sensor)
+        # print("Tcam_sensor:", Tcam_sensor)
 
         return Tcam_sensor
 
@@ -60,17 +61,20 @@ class Pickup:
 
     def ready_to_pick(self, Tcam_sensor):
         Tb_wp = self.get_waypoint(Tcam_sensor)
-        print(R.from_matrix(Tb_wp[:3, :3]).as_euler('XYZ', degrees=True))
-        import pdb;pdb.set_trace()
-        pjtc.set_cartesian(Tb_ed=Tb_wp, duration=10)
+        print("Tb_wp:\n", Tb_wp)
+        # import pdb;pdb.set_trace()
+        import time; time.sleep(3)
+        pjtc.set_cartesian(Tb_ed=Tb_wp, duration=5, force_duration=True)
 
 
     def get_waypoint(self, Tcam_sensor):
         Tb_ee = panda.fk(pjtc.joint_state.position)[0][-1]
+        # import pdb;pdb.set_trace()
         Tb_sensor = Tb_ee @ Tee_cam @ Tcam_sensor   #Tee_cam from Camera/eye_in_hand_param.py
         Tb_wp = np.copy(Tb_sensor)
-        Tb_wp[2, -1] += 0.2
+        Tb_wp[2, -1] += 0.3
 
+        # print(R.from_matrix(Tb_wp[:3, :3]).as_euler('XYZ', degrees=True))
         Tb_wp[:3, :3] = R.from_euler('X', [np.pi]).as_matrix()  # temporary
         return Tb_wp
 

@@ -3,12 +3,16 @@ import cv2
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+from sympy.stats.sampling.sample_scipy import scipy
+
 from Camera.eye_in_hand_param import *
 
 '''
 4X4_50 dictionary set as default.
-If you are using more aruco markers or other shape(3X3, ...), you should add aruco dictionary.
+If you are using other aruco markers or other shape(3X3, ...), you should add aruco dictionary.
+e.g., cv2.aruco.DICT_4X4_100
 '''
+
 class Detect_Marker:
     def __init__(self, marker_size):
         if not rospy.get_node_uri():
@@ -70,8 +74,8 @@ class Detect_Marker:
                                       [self.marker_size / 2, -self.marker_size / 2, 0],
                                       [-self.marker_size / 2, -self.marker_size / 2, 0]], dtype=np.float32)
 
-            # _, rvec, tvec = cv2.solvePnP(marker_points, self.corners[i], self.intrinsic_matrix, self.distortion_params)
-            _, rvec, tvec = cv2.solvePnP(marker_points, self.corners[i], self.intrinsic_matrix, self.distortion_params, False, cv2.SOLVEPNP_IPPE_SQUARE)
+            _, rvec, tvec = cv2.solvePnP(marker_points, self.corners[i], self.intrinsic_matrix, self.distortion_params)
+            # _, rvec, tvec = cv2.solvePnP(marker_points, self.corners[i], self.intrinsic_matrix, self.distortion_params, False, cv2.SOLVEPNP_IPPE_SQUARE)
             pos_x, pos_y, pos_z = tvec[0][0], tvec[1][0], tvec[2][0]
             rot_x, rot_y, rot_z = rvec[0][0], rvec[1][0], rvec[2][0]
 
@@ -87,7 +91,6 @@ class Detect_Marker:
 
             # [[quat_x, quat_y, quat_z, quat_w]] = R.from_rotvec(rvec.reshape(1, 3)).as_quat()
             # [roll_x, pitch_y, yaw_z] = R.from_quat(np.array([quat_x, quat_y, quat_z, quat_w])).as_euler('xyz', degrees=True)
-            # aruco_poses[i] = [pos_x, pos_y, pos_z, quat_x, quat_y, quat_z, quat_w]
             aruco_poses[i] = [pos_x, pos_y, pos_z, rot_x, rot_y, rot_z]
 
             if visualize:
@@ -95,8 +98,8 @@ class Detect_Marker:
                 cv2.drawFrameAxes(self.frame, self.intrinsic_matrix, self.distortion_params, rvec, tvec, 0.03, 1)
 
         if visualize:
-            cv2.aruco.drawDetectedMarkers(self.frame, self.corners)
-            cv2.imshow("visualize_detected_aruco")
+            # cv2.aruco.drawDetectedMarkers(self.frame, self.corners) # works for opencv-python-4.9.0.80
+            cv2.imshow("visualize_detected_aruco", self.frame)
 
         found_id = np.where((np.sum(aruco_poses, axis=1) != 0).ravel())
 
@@ -107,14 +110,18 @@ class Detect_Marker:
 
 if __name__ == '__main__':
     rospy.init_node('realsense_aruco_pub')
+    from scipy.spatial.transform import Rotation as R
 
-    da = Detect_Marker(marker_length=0.017)
+    da = Detect_Marker(marker_size=0.017)
     rate = rospy.Rate(300)
     while True:
-        ids, aruco_poses = da.detect_marker(visualize=False)
+        ids, aruco_poses = da.detect_marker(visualize=True)
         # print(ids)
-        Tcam_aruco = aruco_poses[0]
+        Tcam_aruco = np.eye(4)
+        Tcam_aruco[:3, -1] = aruco_poses[0][:3]
+        Tcam_aruco[:3, :3] = R.from_rotvec(aruco_poses[0][3:]).as_matrix()
         print(Tcam_aruco)
+        # import pdb;pdb.set_trace()
 
         import time
         time.sleep(1)
