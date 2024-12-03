@@ -112,19 +112,20 @@ if __name__ == '__main__':
     rospy.init_node('realsense_aruco_pub')
     from scipy.spatial.transform import Rotation as R
 
-    da = Detect_Marker(marker_size=0.017)
+    # da = Detect_Marker(marker_size=0.017)
+    da = Detect_Marker(marker_size=0.015)
     rate = rospy.Rate(300)
     while True:
-        ids, aruco_poses = da.detect_marker(visualize=True)
+        ids, aruco_poses = da.detect_marker(visualize=False)
+        print(ids, aruco_poses)
         # print(ids)
-        Tcam_aruco = np.eye(4)
-        Tcam_aruco[:3, -1] = aruco_poses[0][:3]
-        Tcam_aruco[:3, :3] = R.from_rotvec(aruco_poses[0][3:]).as_matrix()
-        print(Tcam_aruco)
+        # Tcam_aruco = np.eye(4)
+        # Tcam_aruco[:3, -1] = aruco_poses[0][:3]
+        # Tcam_aruco[:3, :3] = R.from_rotvec(aruco_poses[0][3:]).as_matrix()
+        # print(Tcam_aruco)
         # import pdb;pdb.set_trace()
+        import time;time.sleep(1)
 
-        import time
-        time.sleep(1)
 
 
 

@@ -37,7 +37,6 @@ class PJTC: # position joint trajectory controller
 
 
     def client_send_goal(self, ts, q_traj, duration):   # is this the best choice? ts and q_traj as input?
-        print("duration:", duration)
         st = time.time()
 
         goal = FollowJointTrajectoryGoal()
@@ -46,11 +45,11 @@ class PJTC: # position joint trajectory controller
         goal.trajectory.joint_names = self.joint_state.name
         goal.goal_time_tolerance = rospy.Duration.from_sec(duration)
 
-        for i in range(q_traj.shape[-1]):
+        for i in range(len(q_traj)):
             point = JointTrajectoryPoint()
-            point.positions = q_traj[:, i]
+            point.positions = q_traj[i]
             point.time_from_start = rospy.Duration.from_sec(ts[i])  # time_from_start is relative to trajectory.header.stamp
-            # since point.velocities are not specified, they are all set to zeros.
+
 
             goal.trajectory.points.append(point)
 
@@ -92,18 +91,16 @@ class PJTC: # position joint trajectory controller
         return result
 
 
-    def set_joint(self, q_des, duration, force_duration=False):
+    def set_joint(self, q_des, duration, force_duration=True):
         q_distance = np.abs(q_des - self.joint_state.position)
-        import pdb;
-        pdb.set_trace()
         duration_exe = self.get_duration(duration_des=duration, q_distance=q_distance, force_duration=force_duration)
 
-        ts, q_traj = interpolate_q([self.joint_state.position, q_des], duration=duration_exe, visualize=False)
+        ts, q_traj = interpolate_q([self.joint_state.position, q_des], duration=duration_exe, visualize=True)
         self.client_send_goal(ts, q_traj, duration_exe)
 
 
 
-    def set_cartesian(self, Tb_ed, duration, Tb_ee=None, force_duration=False):
+    def set_cartesian(self, Tb_ed, duration, Tb_ee=None, force_duration=True):
         if Tb_ee is None:
             Tb_ee = panda.fk(self.joint_state.position)[0][-1]
         q_des = panda.ik(Tb_ed, q0=self.joint_state.position)
@@ -112,18 +109,13 @@ class PJTC: # position joint trajectory controller
         duration_exe = self.get_duration(duration_des=duration, q_distance=q_distance, force_duration=force_duration)
 
 
-        Ts = interpolate_T(start_T=Tb_ee, end_T=Tb_ed, duration=duration_exe)
-        # import pdb;pdb.set_trace
-        q_cart_wp = []
-        for T in Ts:
-            q_cart_wp.append(panda.ik(T, q0=self.joint_state.position))
+        ts, q_traj = interpolate_T(start_T=Tb_ee, end_T=Tb_ed, duration=duration_exe)
 
-        ts, q_traj = interpolate_q(q_cart_wp, duration=duration_exe, visualize=False)
         self.client_send_goal(ts, q_traj, duration_exe)
 
 
 
-    def get_duration(self, duration_des, q_distance, force_duration=False):
+    def get_duration(self, duration_des, q_distance, force_duration=True):
         duration_base = max(max(q_distance / self.fr3_max_dq), 1) * 3   # 3 sec as default
 
         if force_duration:
@@ -133,6 +125,7 @@ class PJTC: # position joint trajectory controller
                 duration_exe = duration_base
             else:
                 duration_exe = duration_des
+        print("duration_chosen:", duration_exe)
         return duration_exe
 
 
@@ -144,11 +137,11 @@ if __name__ == "__main__":
     import time; time.sleep(3)
 
     ## Joint Space Command
-    targ_q = cur_q + 0.05 * np.ones(7)
-    print(cur_q)
-    print(targ_q)
+    targ_q = cur_q + 0.1 * np.ones(7)
+    print("current_joint:", cur_q)
+    print("traget_joint:", targ_q)
 
-    pjtc.set_joint(q_des=targ_q, duration=3)
+    pjtc.set_joint(q_des=targ_q, duration=4)
     exit()
 
     ## Cartesian Space Command

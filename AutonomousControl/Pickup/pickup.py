@@ -62,9 +62,11 @@ class Pickup:
     def ready_to_pick(self, Tcam_sensor):
         Tb_wp = self.get_waypoint(Tcam_sensor)
         print("Tb_wp:\n", Tb_wp)
-        # import pdb;pdb.set_trace()
-        import time; time.sleep(3)
-        pjtc.set_cartesian(Tb_ed=Tb_wp, duration=5, force_duration=True)
+        q_wp = panda.ik(Tb_wp)
+
+        # import time; time.sleep(3)
+        # pjtc.set_cartesian(Tb_ed=Tb_wp, duration=5, force_duration=True)
+        pjtc.set_joint(q_des=q_wp, duration=5, force_duration=True)
 
 
     def get_waypoint(self, Tcam_sensor):
