@@ -2,10 +2,9 @@ import os, sys
 sys.path.append(os.path.abspath("/home/surglab/PegInHole/AutonomousControl"))
 import rospy
 import copy
-import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-from AutonomousControl.MoveitCommander import gripper_len
+from Trash.MoveitCommander import gripper_len
 from detect_marker import Detect_Marker
 from MoveitCommander import MvitCommander
 
@@ -58,13 +57,52 @@ targ_q1 = np.array([0.9319362832979685, -0.4030470100789721, 0.3298888907845044,
 Tb_flange1 = panda.fk(targ_q1)[0][-1]
 # print(R.from_matrix(Tb_flange1[:3, :3]).as_euler('ZYX'))
 Tb_ed1 = copy.deepcopy(Tb_flange1)
-Tb_ed1[2, -1] -= gripper_len
+# Tb_ed1[2, -1] -= gripper_len
 Tb_ed1[:3, :3] = R.from_euler('ZX', [-np.pi/4, np.pi]).as_matrix()
 # Tb_ed1[:3, :3] = R.from_euler('ZX', [np.pi/2, -np.pi]).as_matrix()
 # mvit.set_Tb_ed(Tb_ed=Tb_ed1)
+
+###################################################################
+####################### 상혁 테스트 코드 ##############################
+###################################################################
+
+target_mtx = np.array([[ 0.08435, -0.96873, -0.23334, -0.0872 ],
+       [ 0.45931,  0.24561, -0.85364,  0.52123],
+       [ 0.88426, -0.03517,  0.46567,  0.48863],
+       [ 0.     ,  0.     ,  0.     ,  1.     ]])
+
+target_mtx_rotation = target_mtx[:3,:3]
+target_mtx_translation = target_mtx[:3, 3]
+
+goal = np.eye(4)
+
+buffer = target_mtx_rotation[:, 2] * 0.03
+
+
+print(target_mtx)
+
+goal[:3, 0] = target_mtx_rotation[:, 0]
+goal[:3, 1] = -target_mtx_rotation[:, 1]
+goal[:3, 2] = -target_mtx_rotation[:, 2]
+goal[:3, 3] = target_mtx_translation + buffer
+
+Tb_ed1 = goal
+print(Tb_ed1)
+a=input()
+if a == 'a':
+    mvit.set_Tb_ed(Tb_ed=Tb_ed1, execute=True)
+    print("Tb_ed1:", Tb_ed1)
+    quit()
+
+else:
+    quit()
+
+###################################################################
+###################################################################
+###################################################################
+
 mvit.set_Tb_ed(Tb_ed=Tb_ed1, execute=True)
 print("Tb_ed1:", Tb_ed1)
-
 
 
 # 2. Detect Aruco

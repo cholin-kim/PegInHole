@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="path" default="/home/surglab/panda_teleassembly"/>
+    <arg name="rate" default="100"/>
+
+    <group ns="panda_sim">
+      <group ns="environment">
+        <arg name="xyz" default="0 0 0"/>
+        <arg name="rpy" default="0 0 0"/>
+        <param name="robot_description" command="xacro '$(arg path)/model_description/urdf/environment.urdf.xacro' xyz:='$(arg xyz)' rpy:='$(arg rpy)' path:=$(arg path)"/>
+        <param name="rate" type="int" value="$(arg rate)" />
+        <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+        <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+      </group>
+
+      <group ns="panda_lift">
+        <arg name="angle" default="0.0"/>
+        <arg name="radius" default="1.05"/>
+        <param name="robot_description" command="xacro '$(arg path)/model_description/urdf/panda_lift_teleassembly.xacro' angle:='$(arg angle)' radius:='$(arg radius)' path:=$(arg path)"/>
+        <param name="rate" type="int" value="$(arg rate)" />
+        <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+        <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+      </group>
+
+      <!-- <group ns="fr3">
+        <arg name="xyz3" default="-1.0 -0.3 0.1"/>
+        <arg name="rpy3" default="0 0 0"/>
+        <param name="robot_description" command="xacro '$(arg path)/model_description/urdf/panda_arm3_teleassembly.urdf.xacro' xyz:='$(arg xyz3)' rpy:='$(arg rpy3)' path:=$(arg path)"/>
+        <param name="rate" type="int" value="$(arg rate)" />
+        <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+        <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+      </group> -->
+
+    </group>
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg path)/model_description/cfg/view_robot_dual.rviz" required="true" />
+
+</launch>

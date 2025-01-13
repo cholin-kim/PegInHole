@@ -57,7 +57,7 @@ def dhparam_arm(joints):
                      [-np.pi/2, -offset, L3, q5],
                      [np.pi/2, 0, 0, q6],
                      [np.pi/2, L4, 0, q7],
-                     [0, 0, L5, 0]])
+                     [0, 0, L5 + 0.18, 0]])
 
 def dhparam_RCM(joints, theta_offset=0.0):
     # [alpha, a, d, theta]

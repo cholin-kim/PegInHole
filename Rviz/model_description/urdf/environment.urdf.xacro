@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="panda">
+  <xacro:include filename="$(arg path)/model_description/urdf/xkcd_colors.urdf"/>  
+  <xacro:arg name="path" default="/home/surglab/PegInHole/Rviz"/>
+  <xacro:arg name="xyz" default="0 0 0" />
+  <xacro:arg name="rpy" default="0 0 0" />
+  
+  <link name="base">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </link>
+
+  <!-- <joint name="base_joint_worktable" type="fixed">
+    <parent link="base"/>
+    <child link="worktable"/>
+  </joint>
+
+  <link name="worktable">
+    <visual>
+      <origin xyz="$(arg xyz)" rpy="$(arg rpy)"/>
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/visual/optical_table_1800_1200.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin xyz="$(arg xyz)" rpy="$(arg rpy)"/>
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/collision/optical_table_1800_1200.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+  
+  <joint name="base_joint_object" type="fixed">
+    <parent link="worktable"/>
+    <child link="object"/>
+  </joint>
+
+  <link name="object">
+    <visual>
+      <origin xyz="0.4 -0.75 0.33" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/visual/object_dummy_assem.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin xyz="$(arg xyz)" rpy="$(arg rpy)"/>
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/collision/object_dummy_assem.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link> -->
+
+  <link name="curved_rail">
+    <visual>
+      <origin rpy="1.5707963268 0 -0.435" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/visual/rail.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="iron_dark">
+        <color rgba="0.5 0.5 0.5 1" />
+      </material>
+    </visual>
+  </link>
+
+  <joint name="curved_rail" type="fixed">
+    <origin rpy="0 0 0" xyz="-0 0 0"/>
+    <parent link="base"/>
+    <child link="curved_rail"/>
+  </joint>
+
+
+
+  <joint name="object" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="base"/>
+    <child link="stand_obj"/>
+    <axis xyz="0 0 1"/>
+      <limit
+      lower="0"
+      upper="2.1"
+      effort="999"
+      velocity="0.5" />
+  </joint>
+
+  <link name="stand_obj">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 -0.3926990817" /> <!-- in real world they are assembled with about 45/2 degree of rotation -->
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/visual/lift_power_supply.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="adobe"/>
+    </visual>
+
+    <visual>
+      <origin xyz="0 0 0.3" rpy="0 0 -0.3926990817" /> <!-- 솔리드 웍스가 없어서 파일이 안열리기 때문에 도형으로 대체해서 일단 만들었습니다. -->
+      <geometry>
+        <box size="0.320 0.320 0.008"/>
+      </geometry>
+      <material name="dark"/>
+    </visual>
+
+    <visual>
+      <origin xyz="0 0 0.5275" rpy="0 0 -0.3926990817" />
+      <geometry>
+        <cylinder length="1.055" radius="0.0375"/>
+      </geometry>
+      <material name="very_white">
+        <color rgba="1 1 1 1" />
+      </material>
+    </visual>
+
+    <visual>
+      <origin xyz="0 0 1.030" rpy="0 0 -0.3926990817" />
+      <geometry>
+        <cylinder length="0.05" radius="0.05"/>
+      </geometry>
+      <material name="dark"/>
+    </visual>
+  </link>
+
+
+
+  <joint name="joint_obj" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 1.055"/> <!-- height of column of object : 1.055m -->
+    <parent link="stand_obj"/>
+    <child link="object"/>
+  </joint>
+
+  
+
+  <link name="object">
+    <visual>
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/visual/object.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 0 0.7853981634" xyz="0 0 0.415"/> <!-- rotation err of stl : 45 (degree, z-axis)  ,  height of object : 0.415m -->
+      <material name="offwhite"/>
+    </visual>
+  </link>
+
+
+</robot>

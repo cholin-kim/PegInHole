@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="panda">
+  <xacro:arg name="path" default="/home/surglab/catkin_ws_add/src/panda_multiple_arms"/>
+  <xacro:arg name="angle" default="0.0" />
+  <xacro:arg name="radius" default="0.625" />
+  
+  <xacro:arg name="arm_id_1" default="panda_1" />
+  <xacro:arg name="arm_id_2" default="panda_2" />
+  
+
+  <xacro:include filename="$(arg path)/model_description/urdf/xkcd_colors.urdf"/>
+  <xacro:include filename="$(arg path)/model_description/urdf/panda_arm2_teleassembly.urdf.xacro"/>
+  <xacro:include filename="$(arg path)/model_description/urdf/panda_arm3_teleassembly.urdf.xacro"/>
+
+  <!-- <xacro:include filename="$(arg path)/model_description/urdf/panda_arm_teleassembly.xacro"/>
+  <xacro:include filename="$(arg path)/model_description/urdf/panda_gripper_teleassembly.xacro"/>
+  <xacro:include filename="$(arg path)/model_description/urdf/panda_camera.xacro"/> -->
+
+
+
+  <link name="base">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </link>
+
+  <!-- <joint name="joint_base" type="revolute">
+    <origin rpy="0 0 $(arg angle)" xyz="0 0 0"/>
+    <parent link="base"/>
+    <child link="base_rot"/>
+    <axis xyz="0 0 1"/>
+      <limit
+      lower="-2.3"
+      upper="2.3"
+      effort="999"
+      velocity="0.5" />
+  </joint>
+
+
+  <link name="base_rot">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </link>
+
+  <joint name="joint_base_rot" type="fixed">
+    <origin rpy="0 0 0" xyz="-$(arg radius) 0 0.03"/>
+    <parent link="base_rot"/>
+    <child link="cart_base"/>
+  </joint> -->
+
+  <joint name="joint_base_rot" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="base"/>
+    <child link="cart_base"/>
+  </joint>
+
+
+  <link name="cart_base">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <visual>
+     <origin xyz="0 0 0.1175" rpy="0 0 0" />
+     <geometry>
+       <box size="0.25 0.7 0.235" />
+     </geometry>
+     <material name="darkaqua"/>
+   </visual>
+  </link>
+
+  <joint name="joint_cart_base" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.235"/>
+    <parent link="cart_base"/>
+    <child link="lift_base"/>
+  </joint>
+
+
+
+  <link name="lift_base">
+    <visual>
+    <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/visual/lift_low_cover.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="light_dark">
+        <color rgba="0.20588235294117647 0.2411764705882353 0.29215686274509805 1.0" />
+     </material>
+    </visual>
+
+    <visual>
+     <origin xyz="0 0 0.008" rpy="0 0 0" />
+     <geometry>
+       <mesh filename="file://$(arg path)/model_description/meshes/visual/lift_low.stl" scale="0.001 0.001 0.001"/>
+     </geometry>
+     <material name="ice"/>
+   </visual>
+  </link>
+
+  <joint name="joint_lift_base" type="prismatic">
+    <origin rpy="0 0 0" xyz="0 0 0.181"/>
+    <parent link="lift_base"/>
+    <child link="lift_moving"/>
+    <axis xyz="0 0 1"/>
+    <limit
+      lower="0"
+      upper="0.5"
+      effort="999"
+      velocity="0.5" />
+  </joint>
+
+
+  <link name="lift_moving">
+    <visual>
+      <origin xyz="0 0 -0.008" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="file://$(arg path)/model_description/meshes/visual/lift_up.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="adobe"/>
+    </visual>
+
+    <visual>
+     <origin xyz="0 0 -0.008" rpy="0 0 0" />
+     <geometry>
+       <mesh filename="file://$(arg path)/model_description/meshes/visual/lift_up_cover.stl" scale="0.001 0.001 0.001"/>
+     </geometry>
+     <material name="light_dark">
+      <color rgba="0.20588235294117647 0.2411764705882353 0.29215686274509805 1.0" />
+     </material>
+   </visual>
+  </link>
+
+
+
+  <joint name="joint_lift_moving" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.181"/>
+    <parent link="lift_moving"/>
+    <child link="lift_pc"/>
+  </joint>
+
+  <link name="lift_pc">
+    <visual>
+      <origin xyz="-0.091 0.0515 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.446 0.088 0.3565" />
+      </geometry>
+      <material name="dark"/>
+    </visual>
+
+    <visual>
+      <origin xyz="-0.091 -0.0515 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.446 0.088 0.3565" />
+      </geometry>
+      <material name="dark"/>
+    </visual>
+  </link>
+
+
+
+  <!-- attaching two arm on the lift -->
+  <xacro:panda_arm2 arm_id="(arg arm_id_1)" connected_to="lift_moving" path='$(arg path)'/>
+  <xacro:panda_arm3 arm_id="(arg arm_id_2)" connected_to="lift_moving" path='$(arg path)'/>
+
+</robot>

@@ -1,7 +1,7 @@
 import sys
 import copy
-from turtledemo.chaos import jumpto
 
+import franka_msgs.msg
 import rospy
 import moveit_commander
 import moveit_msgs.msg
@@ -11,7 +11,7 @@ import numpy as np
 from Kinematics.panda.pandaKinematics import pandaKinematics
 from Kinematics.panda import pandaVar
 panda = pandaKinematics()
-gripper_len = 0.20  # flange to tcp
+gripper_len = 0.18  # flange to tcp
 
 class MvitCommander:
     def __init__(self):
@@ -73,7 +73,7 @@ class MvitCommander:
         waypoints = []
         Tb_ed = self.preprocess_T(Tb_ed=Tb_ed)
 
-        # start with the current pose <-- do not add current pose, this will interrupt duration.
+        # start with current pose <-- do not add current pose, this will interrupt duration.
         # waypoints.append(self.group.get_current_pose().pose)
 
         wpose = geometry_msgs.msg.Pose()
@@ -98,27 +98,6 @@ class MvitCommander:
         # for i in range(len(plan.joint_trajectory.points)):
         #     plan.joint_trajectory.points[i].time_from_start = rospy.Duration.from_sec(t[i])
         #########################################################################################
-
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(311)
-        ax2 = fig.add_subplot(312)
-        ax3 = fig.add_subplot(313)
-        ax.set_title("joint position for joint4")
-        ax2.set_title("joint velocity for joint4")
-        ax3.set_title("joint acceleration for joint4")
-
-        for i in range(len(plan.joint_trajectory.points)):
-            t = plan.joint_trajectory.points[i].time_from_start.nsecs + plan.joint_trajectory.points[i].time_from_start.secs * 1e9
-            q4 = plan.joint_trajectory.points[i].positions[3]
-            dq4 = plan.joint_trajectory.points[i].velocities[3]
-            ddq4 = plan.joint_trajectory.points[i].accelerations[3]
-
-            ax.scatter(t, q4, c='r')
-            ax2.scatter(t, dq4, c='r')
-            ax3.scatter(t, ddq4, c='r')
-        plt.suptitle("ompl time parameterization: IterativeSplineParameterization")
-        plt.show()
 
         # print(plan)
 
@@ -165,37 +144,40 @@ class MvitCommander:
 
 if __name__ == "__main__":
     mvit = MvitCommander()
-    print("cur_q:", mvit.joint_state)
-    # target_q = mvit.joint_state
+    cur_q = mvit.joint_state
+    # print("cur_q:", cur_q)
+    #
+    # ## 1. Joint command
+    # target_q = copy.deepcopy(cur_q)
     # target_q += 0.05 * np.ones(7)
     # print("target_q:", target_q)
-
-    # mvit.set_joint(target_q=target_q, execute=True)
-
-    Tb_ed = np.identity(4)
-    Tb_ed[:3, :3] = R.from_euler('XZ', [np.pi, -np.pi/2]).as_matrix()
-    # Tb_ed1[:3, :3] = R.from_euler('X', [np.pi]).as_matrix()
-    Tb_ed[:3, -1] = [0.5, 0.1, 0.5]
-    # q = panda.ik(Tb_ed1)
-    # mvit.set_joint(target_q = q)
-
-    pose_target = geometry_msgs.msg.Pose()
-
-    target_ori = R.from_matrix(Tb_ed[:3, :3]).as_quat()
-    pose_target.orientation.x = target_ori[0]
-    pose_target.orientation.y = target_ori[1]
-    pose_target.orientation.z = target_ori[2]
-    pose_target.orientation.w = target_ori[3]
-    pose_target.position.x = Tb_ed[0, -1]
-    pose_target.position.y = Tb_ed[1, -1]
-    pose_target.position.z = Tb_ed[2, -1]
-
-    pose_target.position.z += gripper_len
-
-    # mvit.group.set_pose_target(pose_target)
     #
-    # plan = mvit.group.plan()
-    # rospy.sleep(2)
-    # mvit.group.go(wait=True)
+    # # mvit.set_joint(target_q=target_q, execute=True)
 
+
+    ## 2. Tb_ed command
+    Tb_ed = panda.fk(cur_q)[0][-1]
+    message = rospy.wait_for_message("/franka_state_controller/franka_states", franka_msgs.msg.FrankaState)
+    Tb_ee = np.array(message.O_T_EE).reshape(4, 4).T
+    # Tb_ed[:3, :3] = R.from_euler('XZ', [np.pi, -np.pi/2]).as_matrix()
+    Tb_ed[:3, -1] += [0.0, 0.0, 0.01]
+
+        # 2-1. Joint space
+    # mvit.set_Tb_ed(Tb_ed=Tb_ed, execute=False)
+    # mvit.set_Tb_ed(Tb_ed=Tb_ed, execute=True)
+        # 2-2. Cartesian space
+    # mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=False)
+    mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=True)
+
+    ## 3. Pose command(joint space)
+    # pose_target = geometry_msgs.msg.Pose()
+    # target_ori = R.from_matrix(Tb_ed[:3, :3]).as_quat()
+    # pose_target.orientation.x = target_ori[0]
+    # pose_target.orientation.y = target_ori[1]
+    # pose_target.orientation.z = target_ori[2]
+    # pose_target.orientation.w = target_ori[3]
+    # pose_target.position.x = Tb_ed[0, -1]
+    # pose_target.position.y = Tb_ed[1, -1]
+    # pose_target.position.z = Tb_ed[2, -1]
+    # mvit.set_pose(pose=pose_target, execute=True)
 

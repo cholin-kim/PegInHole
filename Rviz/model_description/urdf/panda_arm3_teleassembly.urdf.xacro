@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="panda">
+  <xacro:macro name="panda_arm3" params="arm_id:='panda_2' connected_to:='' path:='/home/surglab/PegInHole/Rviz'" >
+
+    <!-- <xacro:include filename="${path}/model_description/urdf/xkcd_colors.urdf"/> -->
+    <xacro:include filename="${path}/model_description/urdf/panda_arm_teleassembly.xacro"/>
+    <xacro:include filename="${path}/model_description/urdf/panda_camera.xacro"/>
+
+
+
+    <joint name="${arm_id}_joint_lift_moving" type="fixed">
+      <origin rpy="0 0 -0.5270894341" xyz="0.1126314 0.31275 0"/>
+      <parent link="${connected_to}"/>
+      <child link="${arm_id}_base"/>
+
+    </joint>
+
+
+    <link name="${arm_id}_base">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </link>
+
+
+
+    <!-- Arm3 (left) with camera -->
+    <xacro:panda_arm arm_id="${arm_id}" connected_to="${arm_id}_base" model_path='${path}' L1="0.3330" L2="0.3160" L3="0.3840" L4="0.0880" L5="0.1070" elbow_offset="0.0825"/>
+    <xacro:panda_camera arm_id="${arm_id}" connected_to="${arm_id}_link7" model_path='${path}'/>
+
+  </xacro:macro>
+
+</robot>

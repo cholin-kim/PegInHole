@@ -1,0 +1,31 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="panda">
+  <xacro:macro name="panda_camera" params="arm_id:='panda' connected_to:='' xyz:='0 0 0' rpy:='0 0 0' model_path:='/home/surglab/PegInHole/Rviz' L6:=0.16402" >
+
+  <!-- gripper links --> 
+  <xacro:unless value="${connected_to == ''}">
+    <joint name="${arm_id}_joint_ff" type="fixed">
+      <parent link="${connected_to}" />
+      <child link="${arm_id}_link_driving" />
+      <origin xyz="${xyz}" rpy="${rpy}" />
+    </joint>
+  </xacro:unless>
+  
+  <link name="${arm_id}_link_driving">
+    <visual>
+      <geometry>
+        <mesh filename="file://${model_path}/model_description/meshes/visual/stereo_camera.STL"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+  </link>
+  
+  <joint name="${arm_id}_joint_camera_ee" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 ${L6}"/>
+    <parent link="${arm_id}_link_driving"/>
+    <child link="${arm_id}_link_camera_ee"/>
+  </joint>
+
+  <link name="${arm_id}_link_camera_ee"/>  
+  </xacro:macro>
+</robot>

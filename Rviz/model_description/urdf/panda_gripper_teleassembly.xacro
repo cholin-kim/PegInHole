@@ -1,0 +1,103 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="panda">
+  <xacro:macro name="panda_gripper" params="arm_id:='panda' connected_to:='' xyz:='0 0 0' rpy:='0 0 0' model_path:='/home/surglab/PegInHole/Rviz' L6:=0.1383 L7:=0.0453 L8:=0.0127" >
+
+  <!-- gripper links --> 
+  <xacro:unless value="${connected_to == ''}">
+    <joint name="${arm_id}_joint_ff" type="fixed">
+      <parent link="${connected_to}" />
+      <child link="${arm_id}_link_driving" />
+      <origin xyz="0 0 0" rpy="${rpy}" />
+    </joint>
+  </xacro:unless>
+
+  <link name="${arm_id}_link_driving">
+    <visual>
+      <geometry>
+        <mesh filename="file://${model_path}/model_description/meshes/visual/hand_base_2.stl" scale="0.001 0.001 0.001"/> <!-- 101mm 높이 -->
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+
+      <!-- 참고 : freecad에서 물체 선택 후 우클릭 -> placement -> 위치 조정 가능... 왠만하면 0 0 0 으로 설정하는게 편함... 이걸 이제 알아서 1시간 날린듯... -->
+
+      <material name="charcoalgrey"/>
+    </visual>
+  </link>
+
+
+
+  <!--Finger1-->
+  <joint name="${arm_id}_joint_finger1" type="prismatic">
+    <origin rpy="0 0 0.524" xyz="0 0 0.101"/>
+    <parent link="${arm_id}_link_driving"/>
+    <child link="${arm_id}_link_finger1"/>
+    <axis xyz="-1 0 0"/>
+    <limit effort="999.999" lower="0.0" upper="${40*pi/180}" velocity="999.999"/>
+  </joint>
+
+  <link name="${arm_id}_link_finger1">
+    <visual>
+      <geometry>
+        <mesh filename="file://${model_path}/model_description/meshes/visual/customized_finger.stl" scale="0.001 0.001 0.001"/> <!-- 70mm 높이 -->
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <material name="blueblue"/>
+    </visual>
+  </link>
+
+
+
+  <!--Finger 2 -->
+  <joint name="${arm_id}_joint_finger2" type="prismatic">
+    <origin rpy="0 0 2.6183951024" xyz="0 0 0.101"/>
+    <parent link="${arm_id}_link_driving"/>
+    <child link="${arm_id}_link_finger2"/>
+    <axis xyz="-1 0 0"/>
+    <limit effort="999.999" lower="0.0" upper="${40*pi/180}" velocity="999.999"/>
+  </joint>
+
+  <link name="${arm_id}_link_finger2">
+    <visual>
+      <geometry>
+        <mesh filename="file://${model_path}/model_description/meshes/visual/customized_finger.stl" scale="0.001 0.001 0.001"/> <!-- 70mm 높이 -->
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <material name="blueblue"/>
+    </visual>
+  </link>
+
+
+
+  <!--Finger 3 -->
+  <joint name="${arm_id}_joint_finger3" type="prismatic">
+    <origin rpy="0 0 4.7127902048" xyz="0 0 0.101"/>
+    <parent link="${arm_id}_link_driving"/>
+    <child link="${arm_id}_link_finger3"/>
+    <axis xyz="-1 0 0"/>
+    <limit effort="999.999" lower="0.0" upper="${40*pi/180}" velocity="999.999"/>
+  </joint>
+
+  <link name="${arm_id}_link_finger3">
+    <visual>
+      <geometry>
+        <mesh filename="file://${model_path}/model_description/meshes/visual/customized_finger.stl" scale="0.001 0.001 0.001"/> <!-- 70mm 높이 -->
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <material name="blueblue"/>
+    </visual>
+  </link>
+
+
+
+  <!-- Finger end ... 추적하기 위한 용도... -->
+  <joint name="${arm_id}_joint_finger_end" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.171"/>
+    <parent link="${arm_id}_link_driving"/>
+    <child link="${arm_id}_link_finger_end"/>
+  </joint>
+
+  <link name="${arm_id}_link_finger_end"/>
+
+
+  </xacro:macro>
+</robot>
