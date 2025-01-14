@@ -47,6 +47,9 @@ def dhparam_surgery(joints, theta_offset=0.0):
                      [0, 0, L6, theta_offset],
                      [-np.pi / 2, 0, 0, -np.pi / 2]])
 
+
+
+gripper_len = 0.18  # flange to tcp
 def dhparam_arm(joints):
     # [alpha, a, d, theta]
     q1, q2, q3, q4, q5, q6, q7 = np.array(joints).T
@@ -57,7 +60,7 @@ def dhparam_arm(joints):
                      [-np.pi/2, -offset, L3, q5],
                      [np.pi/2, 0, 0, q6],
                      [np.pi/2, L4, 0, q7],
-                     [0, 0, L5 + 0.18, 0]])
+                     [0, 0, L5 + gripper_len, 0]])
 
 def dhparam_RCM(joints, theta_offset=0.0):
     # [alpha, a, d, theta]

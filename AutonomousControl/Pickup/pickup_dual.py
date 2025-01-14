@@ -4,43 +4,25 @@ import rospy
 import copy
 from scipy.spatial.transform import Rotation as R
 
-from Trash.MoveitCommander import gripper_len
+from Kinematics.panda.pandaVar import gripper_len
 from detect_marker import Detect_Marker
-from MoveitCommander import MvitCommander
+from AutonomousControl.MoveitCommander_dual import MvitCommander_dual
+# from MoveitCommander_dual import MvitCommander_dual
 
 from Kinematics.panda.pandaKinematics import pandaKinematics
-from Camera.eye_in_hand_param import *
+from Camera.eye_in_hand_param_d455 import *
 from Gripper.DHGripperROS import DHGripperROS
 
 panda = pandaKinematics()
 gripper = DHGripperROS()
 dm = Detect_Marker(marker_size=0.0125)
-mvit = MvitCommander()
+
+mvit_gripper = MvitCommander_dual(group_name="gripper_arm")
+mvit_camera = MvitCommander_dual(group_name="camera_arm")
 
 
 if not rospy.get_node_uri():
     rospy.init_node("pickup")
-
-## Temporary code for testing cartesian path
-# cur_q = np.array(mvit.group.get_current_joint_values())
-# Tb_ed = np.copy(panda.fk(cur_q)[0][-1])
-# Tb_ed[2, -1] -= gripper_len
-# Tb_ed[1, -1] -= 0.1
-# mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=True)
-# quit()
-#
-# # import time; time.sleep(1)
-# Tb_ed[1, -1] -= 0.1
-# # mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=True)
-# # time.sleep(1)
-# Tb_ed[2, -1] += 0.1
-# # mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=True)
-#
-# # time.sleep(1)
-# Tb_ed[1, -1] += 0.1
-# # mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=True)
-# quit()
-
 
 # 0. Open Gripper
 rospy.loginfo("Releasing the Gripper.")
@@ -50,17 +32,21 @@ gripper.set_gripper(position=1000, speed=gripper.speed, force=20, initialize=Fal
 # 1. Move to waypoint that can see all possible poses   #<- motion scale joint motion scale
 rospy.loginfo("Move to the waypoint for sensor detection.")
 ## should be manually set depending on the jig location
-targ_q1 = np.array([0.9319362832979685, -0.4030470100789721, 0.3298888907845044, -2.08742357272127, 0.06789568625091212, 1.6912255419734388, 2.0481327440708523])
-# mvit.set_joint(target_q=targ_q1)
-# mvit.set_joint(target_q=targ_q1, execute=True)
+targ_q1 = np.array([-0.3106821202909733, -0.9072408227438297, 0.5450804333282867, -2.101726508105946, 0.4202798927918319, 1.193987481978699, 1.57])
+# mvit_gripper.set_joint(targ_q=targ_q1, execute=False)
+mvit_gripper.set_joint(targ_q=targ_q1, execute=True)
 
-Tb_flange1 = panda.fk(targ_q1)[0][-1]
-# print(R.from_matrix(Tb_flange1[:3, :3]).as_euler('ZYX'))
-Tb_ed1 = copy.deepcopy(Tb_flange1)
-# Tb_ed1[2, -1] -= gripper_len
-Tb_ed1[:3, :3] = R.from_euler('ZX', [-np.pi/4, np.pi]).as_matrix()
+
+Tb_tcp1 = panda.fk(targ_q1)[0][-1]
+# print(R.from_matrix(Tb_tcp1[:3, :3]).as_euler('ZYX'))
+Tb_ed1 = copy.deepcopy(Tb_tcp1)
+# currently base frame is set to center.
+Tb_ed1[:3, :3] = R.from_euler('ZX', [0, np.pi]).as_matrix()
 # Tb_ed1[:3, :3] = R.from_euler('ZX', [np.pi/2, -np.pi]).as_matrix()
-# mvit.set_Tb_ed(Tb_ed=Tb_ed1)
+mvit_gripper.set_Tb_ed(Tb_ed=Tb_ed1)
+# mvit_gripper.set_Tb_ed(Tb_ed=Tb_ed1, execute=True)
+print("Tb_ed1:", Tb_ed1)
+exit()
 
 ###################################################################
 ####################### 상혁 테스트 코드 ##############################
@@ -101,8 +87,7 @@ else:
 ###################################################################
 ###################################################################
 
-mvit.set_Tb_ed(Tb_ed=Tb_ed1, execute=True)
-print("Tb_ed1:", Tb_ed1)
+
 
 
 # 2. Detect Aruco

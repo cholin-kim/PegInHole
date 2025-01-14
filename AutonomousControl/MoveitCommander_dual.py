@@ -9,15 +9,15 @@ import geometry_msgs.msg
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 from Kinematics.panda.pandaKinematics import pandaKinematics
-from Kinematics.panda import pandaVar
+from Kinematics.panda.pandaVar import gripper_len
 panda = pandaKinematics()
-gripper_len = 0.18  # flange to tcp, should be equal to the value in pandaVar
+
 
 
 ## currently cannot executable via moveit, since controller not connected.
 ## executing with other controller
 
-class MvitPlanner_dual:
+class MvitCommander_dual:
     def __init__(self, group_name):
         print("============ Starting tutorial setup")
         moveit_commander.roscpp_initialize(sys.argv)
@@ -34,10 +34,16 @@ class MvitPlanner_dual:
         # self.display_trajectory_publisher = rospy.Publisher(self.group_name + '/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=1)
 
         ## Getting Basic Information
+        #
+        # if self.group_name == "gripper_arm":
+        #     self.group.set_pose_reference_frame("panda_2_link0")
+        # elif self.group_name == "camera_arm":
+        #     self.group.set_pose_reference_frame("panda_1_link0")
         print("============ Reference frame: %s" % self.group.get_planning_frame())
-        print("============ Reference frame: %s" % self.group.get_end_effector_link())
+        print("============ EE link: %s" % self.group.get_end_effector_link())
         print("============ Robot Groups:")
         print(self.robot.get_group_names())
+
 
         self.joint_state = self.group.get_current_joint_values()
         # print("============ Printing robot state")
@@ -46,7 +52,7 @@ class MvitPlanner_dual:
         # print( "============")
 
 
-    def plan_joint(self, target_q):
+    def set_joint(self, targ_q, execute=False):
         ## Warning
         # joint values should be obtained after considering gripper len!!!
         ##
@@ -55,7 +61,7 @@ class MvitPlanner_dual:
 
         group_variable_values = self.group.get_current_joint_values()
         print("============ Joint values: ", group_variable_values)
-        group_variable_values = target_q
+        group_variable_values = targ_q
         self.group.set_joint_value_target(group_variable_values)
 
         plan = self.group.plan()
@@ -69,16 +75,15 @@ class MvitPlanner_dual:
         # self.display_trajectory_publisher.publish(display_trajectory);
         # print ("============ Waiting while plan1 is visualized (again)...")
         # rospy.sleep(5)
-        self.group.go(wait=True)
+
+        if execute: self.group.go(wait=True)
 
         result, joint_traj = plan[0], plan[1].joint_trajectory.points  # Bool, list
         return result, joint_traj
 
 
+### Currently unable to plan trajectory in local frame. Remapping T from base to panda_{i}_link0.###
 
-
-
-########################################################################################################################
 
     def set_Tb_ed(self, Tb_ed, execute=False):
         self.group.clear_pose_targets()
@@ -96,10 +101,11 @@ class MvitPlanner_dual:
         self.group.set_pose_target(pose_target)
 
         plan = self.group.plan()
+        # print(plan)
         rospy.sleep(2)
 
+        if execute: self.group.go(wait=True)
 
-        # if execute: self.group.go(wait=True)
 
     def set_cartesian_path(self, Tb_ed, execute=False):
         self.group.clear_pose_targets()
@@ -158,9 +164,10 @@ class MvitPlanner_dual:
         Tb_flange = Tb_ed @ np.linalg.inv(Tflagne_tcp)
         return Tb_flange
 
+
 if __name__ == "__main__":
-    mvit_gripper = MvitPlanner_dual(group_name="gripper_arm")
-    mvit_camera = MvitPlanner_dual(group_name="camera_arm")
+    mvit_gripper = MvitCommander_dual(group_name="pd1")
+    mvit_camera = MvitCommander_dual(group_name="pd2")
 
     cur_q_gripper = mvit_gripper.joint_state
     cur_q_camera = mvit_camera.joint_state
@@ -171,28 +178,25 @@ if __name__ == "__main__":
     ## 1. Joint command
     target_q_gripper = copy.deepcopy(cur_q_gripper)
     target_q_gripper += -0.05 * np.ones(7)
-    result, joint_traj = mvit_gripper.plan_joint(target_q=target_q_gripper)
-    exit()
-    # target_q = copy.deepcopy(cur_q)
-    # target_q += 0.05 * np.ones(7)
-    # print("target_q:", target_q)
-    #
-    # # mvit.set_joint(target_q=target_q, execute=True)
+    target_q_camera = copy.deepcopy(cur_q_camera)
+    target_q_camera += -0.05 * np.ones(7)
+    # mvit_gripper.set_joint(targ_q=target_q_gripper)
+    # mvit_camera.set_joint(targ_q=target_q_camera)
 
 
     ## 2. Tb_ed command
-    Tb_ed = panda.fk(cur_q)[0][-1]
-    message = rospy.wait_for_message("/franka_state_controller/franka_states", franka_msgs.msg.FrankaState)
-    Tb_ee = np.array(message.O_T_EE).reshape(4, 4).T
+    # Tb_ed_gripper = panda.fk(cur_q_gripper)[0][-1]
+    message_camera = rospy.wait_for_message("/combined_panda/panda_2_state_controller/franka_states", franka_msgs.msg.FrankaState)
+    Tb_ee_camera = np.array(message_camera.O_T_EE).reshape(4, 4).T
     # Tb_ed[:3, :3] = R.from_euler('XZ', [np.pi, -np.pi/2]).as_matrix()
-    Tb_ed[:3, -1] += [0.0, 0.0, 0.01]
+    Tb_ee_camera[:3, -1] += [0.0, 0.0, 0.01]
 
         # 2-1. Joint space
-    # mvit.set_Tb_ed(Tb_ed=Tb_ed, execute=False)
-    # mvit.set_Tb_ed(Tb_ed=Tb_ed, execute=True)
+    mvit_camera.set_Tb_ed(Tb_ed=Tb_ee_camera, execute=False)
+    exit()
         # 2-2. Cartesian space
     # mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=False)
-    mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=True)
+    # mvit.set_cartesian_path(Tb_ed=Tb_ed, execute=True)
 
     ## 3. Pose command(joint space)
     # pose_target = geometry_msgs.msg.Pose()

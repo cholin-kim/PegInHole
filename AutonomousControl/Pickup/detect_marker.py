@@ -5,7 +5,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
 
-from Camera.eye_in_hand_param import *
+from Camera.eye_in_hand_param_d455 import *
 
 '''
 4X4_50 dictionary set as default.
