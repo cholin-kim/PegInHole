@@ -67,7 +67,8 @@ class Detect_Marker:
 
     def detect_marker(self, visualize=False):
         self.find_aruco()
-        aruco_poses = np.zeros((4, 6))
+        # aruco_poses = np.zeros((4, 6))
+        aruco_poses = np.zeros((8, 6))
 
         for i in range(len(self.ids)):
             marker_points = np.array([[-self.marker_size / 2, self.marker_size / 2, 0],

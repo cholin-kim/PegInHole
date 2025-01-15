@@ -33,7 +33,7 @@ The internal parameters can be used to warp a raw(=distorted) image to:
     1. An undistorted img(requires D and K)
     2. A rectified img(requires D, K, R)
 '''
-img_width = 848
+img_width = 640
 img_height = 480
 
 
@@ -58,10 +58,21 @@ P = np.array([[383.37890625, 0.0, 329.32598876953125, 0.0],
 
 from Kinematics.panda.pandaVar import *
 
-Tee_cam =np.array([[0.000279179 ,    0.99999, -0.00454143,  -0.0927863],
-                   [-0.999999, 0.000274307, -0.00107333,   0.0116264],
-                   [-0.00107208, 0.00454173, 0.999989, 0.103118-gripper_len],
-                   [0,           0,           0           ,1]])
+# Tee_cam =np.array([[0.000279179 ,    0.99999, -0.00454143,  -0.0927863],
+#                    [-0.999999, 0.000274307, -0.00107333,   0.0116264],
+#                    [-0.00107208, 0.00454173, 0.999989, 0.103118-gripper_len],
+#                    [0,           0,           0           ,1]])
+pose_flange_cam = np.array([0.0120477, -0.0955359, 0.0829928,   -0.00207123, -0.00146682, 0.00180441, 0.999995])
+from scipy.spatial.transform import Rotation as R
+
+Tflange_cam = np.eye(4)
+Tflange_cam[:3, :3] = R.from_quat(pose_flange_cam[3:]).as_matrix()
+Tflange_cam[:3, -1] = pose_flange_cam[:3]
+
+Tflange_ee = np.identity(4)
+Tflange_ee[2, -1] = gripper_len
+
+Tee_cam = np.linalg.inv(Tflange_ee) @ Tflange_cam
 
 
 

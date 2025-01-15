@@ -50,7 +50,7 @@ def interpolate_q(q_lst, duration, visualize=False):
 
 def interpolate_T(start_T, end_T, duration, visualize=False):
     t = np.array([0, duration])
-    ts = np.linspace(0, duration, int(duration * 5))
+    ts = np.linspace(0, duration, int(duration * 100))
 
     pos = start_T[:3, -1]
     pos_des = end_T[:3, -1]
@@ -81,9 +81,9 @@ def interpolate_T(start_T, end_T, duration, visualize=False):
     Ts[:, :3, -1] = pos_traj
     Ts[:, :3, :3] = ori_traj
 
-    for T in Ts:
-        q_traj.append(panda.ik(T))
-    q_traj = np.array(q_traj)
+    # for T in Ts:
+    #     q_traj.append(panda.ik(T))
+    # q_traj = np.array(q_traj)
 
 
     if visualize:
@@ -107,8 +107,8 @@ def interpolate_T(start_T, end_T, duration, visualize=False):
             ax.quiver(position[0], position[1], position[2], z_axis[0], z_axis[1], z_axis[2], color='b', length=axis_length, normalize=True)
 
         ax2 = fig.add_subplot(122)
-        for i in range(len(q_traj[0])):
-            ax2.scatter(ts, q_traj[:, i], s=2)
+        # for i in range(len(q_traj[0])):
+        #     ax2.scatter(ts, q_traj[:, i], s=2)
 
         # Set labels and display the plot
         ax.set_xlabel('X')
@@ -119,7 +119,7 @@ def interpolate_T(start_T, end_T, duration, visualize=False):
         ax.legend()
         plt.show()
 
-    return ts, q_traj
+    return ts, Ts
 
 
 if __name__ == "__main__":
